@@ -87,8 +87,3 @@ extern BOOL g_bInMenu;
 
 tdstBreakpoint * fn_p_stAddBreakpoint( tdstNewBreakpoint *p_stNew );
 void fn_vRemoveBreakpoint( tdstBreakpoint *p_stBreakpoint );
-
-void * fn_pvGetDsgVar( HIE_tdstSuperObject *p_stSpo, int idx, AI_tdeDsgVarType *eType_Out );
-void * fn_pvGetDsgVarValue( HIE_tdstSuperObject *p_stSpo, int idx );
-AI_tdeDsgVarType fn_eGetDsgVarType( HIE_tdstSuperObject *p_stSpo, int idx );
-void fn_vEnumDsgVar( HIE_tdstSuperObject *p_stSpo, tdfnDsgVarEnum p_fnEnum );

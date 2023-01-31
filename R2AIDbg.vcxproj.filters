@@ -24,6 +24,12 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="alert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="misc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.c">
@@ -35,6 +41,12 @@
     <ClCompile Include="dialog.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="alert.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="misc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="R2AIDbg.rc">
@@ -43,6 +55,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\appicon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resources\bang.bmp">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

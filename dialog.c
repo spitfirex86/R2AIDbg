@@ -1,6 +1,7 @@
 ﻿#include "framework.h"
 #include "resource.h"
 #include "debug.h"
+#include "misc.h"
 
 
 tdstNewBreakpoint g_stAddDlgData = { 0 };

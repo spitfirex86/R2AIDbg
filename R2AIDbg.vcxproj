@@ -86,20 +86,25 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="alert.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="misc.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="alert.c" />
     <ClCompile Include="debug.c" />
     <ClCompile Include="dialog.c" />
     <ClCompile Include="dllmain.c" />
+    <ClCompile Include="misc.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="R2AIDbg.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\appicon.ico" />
+    <Image Include="resources\bang.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
