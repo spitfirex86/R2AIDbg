@@ -55,12 +55,50 @@ void fn_vPopulateSposCB( HWND hCB )
 	}
 }
 
+
+
+void fn_vUpdateControlsStatus_AddDlg( HWND hWnd )
+{
+	HWND hOk = GetDlgItem(hWnd, IDOK);
+	HWND hSpos = GetDlgItem(hWnd, IDC_SPOS);
+	HWND hType_Dsg = GetDlgItem(hWnd, IDC_TYPE_DSG);
+	HWND hDsgVars = GetDlgItem(hWnd, IDC_DSGVARS);
+
+	BOOL bGotSpo = ComboBox_GetCurSel(hSpos) != CB_ERR;
+	BOOL bSpoHasDsgVars = IsWindowEnabled(hType_Dsg);
+	BOOL bDsgTypeSelected = Button_GetCheck(hType_Dsg);
+	BOOL bGotDsgVar = ComboBox_GetCurSel(hDsgVars) != CB_ERR;
+
+	/* No SPO selected - disable DsgVar options */
+	if ( !bGotSpo )
+	{
+		EnableWindow(hOk, FALSE);
+		EnableWindow(hType_Dsg, FALSE);
+		EnableWindow(hDsgVars, FALSE);
+		return;
+	}
+
+	/* SPO was changed after selecting Dsg type - reset type selection */
+	if ( !bSpoHasDsgVars && bDsgTypeSelected )
+	{
+		CheckRadioButton(hWnd, IDC_TYPE_HP, IDC_TYPE_DSG, IDC_TYPE_HP);
+		bDsgTypeSelected = FALSE;
+	}
+
+	/* OK when a type other than Dsg is selected, or a DsgVar has already been chosen */
+	EnableWindow(hOk, !bDsgTypeSelected || bGotDsgVar);
+	/* Only enable when SPO has DsgVars */
+	EnableWindow(hType_Dsg, bSpoHasDsgVars);
+	/* Only enable when DsgVar type is selected */
+	EnableWindow(hDsgVars, bDsgTypeSelected);
+}
+
 BOOL CALLBACK AddDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
 	static HWND hOk = NULL;
 	static HWND hSpos = NULL;
 	static HWND hDsgVars = NULL;
-	static HWND hDsgVarRadio = NULL;
+	static HWND hType_DsgVar = NULL;
 
 	switch ( uMsg )
 	{
@@ -69,7 +107,7 @@ BOOL CALLBACK AddDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			hOk = GetDlgItem(hWnd, IDOK);
 			hSpos = GetDlgItem(hWnd, IDC_SPOS);
 			hDsgVars = GetDlgItem(hWnd, IDC_DSGVARS);
-			hDsgVarRadio = GetDlgItem(hWnd, IDC_TYPE_DSG);
+			hType_DsgVar = GetDlgItem(hWnd, IDC_TYPE_DSG);
 
 			fn_vPopulateSposCB(hSpos);
 			EnableWindow(hDsgVars, FALSE);
@@ -77,8 +115,8 @@ BOOL CALLBACK AddDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
 			CheckRadioButton(hWnd, IDC_TYPE_HP, IDC_TYPE_DSG, IDC_TYPE_HP);
 			CheckRadioButton(hWnd, IDC_MODE_ZERO, IDC_MODE_CHANGE, IDC_MODE_ZERO);
-			EnableWindow(hDsgVarRadio, FALSE);
-
+			EnableWindow(hType_DsgVar, FALSE);
+			
 			return TRUE;
 		}
 
@@ -93,23 +131,10 @@ BOOL CALLBACK AddDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 						{
 							HIE_tdstSuperObject *p_stSpo = (HIE_tdstSuperObject *)ComboBox_GetItemData(hSpos, lIdx);
 
-							if ( fn_lPopulateDsgVarsCB(hDsgVars, p_stSpo) )
-							{
-								if ( Button_GetCheck(hDsgVarRadio) )
-									EnableWindow(hOk, FALSE);
+							int lNbVars = fn_lPopulateDsgVarsCB(hDsgVars, p_stSpo);
 
-								EnableWindow(hDsgVarRadio, TRUE);
-								EnableWindow(hOk, !Button_GetCheck(hDsgVarRadio));
-							}
-							else
-							{
-								if ( Button_GetCheck(hDsgVarRadio) )
-									CheckRadioButton(hWnd, IDC_TYPE_HP, IDC_TYPE_DSG, IDC_TYPE_HP);
-
-								EnableWindow(hDsgVarRadio, FALSE);
-								EnableWindow(hDsgVars, FALSE);
-								EnableWindow(hOk, TRUE);
-							}
+							EnableWindow(hType_DsgVar, (lNbVars > 0));
+							fn_vUpdateControlsStatus_AddDlg(hWnd);
 						}
 						return TRUE;
 					}
@@ -120,37 +145,21 @@ BOOL CALLBACK AddDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 					{
 						if ( ComboBox_GetCurSel(hDsgVars) != CB_ERR )
 						{
-							EnableWindow(hOk, Button_GetCheck(hDsgVarRadio));
+							fn_vUpdateControlsStatus_AddDlg(hWnd);
 						}
 						return TRUE;
 					}
 				break;
 
 				case IDC_TYPE_HP:
-					EnableWindow(hDsgVars, FALSE);
-					EnableWindow(hOk, TRUE);
-					return TRUE;
-
 				case IDC_TYPE_HPM:
-					EnableWindow(hDsgVars, FALSE);
-					EnableWindow(hOk, TRUE);
-					return TRUE;
-
 				case IDC_TYPE_DSG:
-					EnableWindow(hDsgVars, TRUE);
-					EnableWindow(hOk, (ComboBox_GetCurSel(hDsgVars) != CB_ERR));
-					return TRUE;
+					fn_vUpdateControlsStatus_AddDlg(hWnd);
 
 				case IDC_MODE_ZERO:
-					g_stAddDlgData.eMode = e_BM_Zero;
-					return TRUE;
-
 				case IDC_MODE_NZERO:
-					g_stAddDlgData.eMode = e_BM_NonZero;
-					return TRUE;
-
 				case IDC_MODE_CHANGE:
-					g_stAddDlgData.eMode = e_BM_Change;
+					fn_vUpdateControlsStatus_AddDlg(hWnd);
 					return TRUE;
 
 				case IDOK:
