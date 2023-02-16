@@ -296,7 +296,7 @@ void fn_vShowMainDialog( void )
 
 LRESULT CALLBACK MOD_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-	if ( uMsg == WM_KEYDOWN && wParam == 'D' )
+	if ( uMsg == WM_KEYDOWN && wParam == 'D' && IPT_g_stInputStructure->ulNumberOfEntryElement )
 	{
 		fn_vShowMainDialog();
 		return 0;

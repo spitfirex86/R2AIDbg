@@ -3,7 +3,7 @@
 
 
 HINSTANCE g_hDllInst = NULL;
-WNDPROC R2_WndProc = OFFSET(0x4022D0);
+WNDPROC R2_WndProc = NULL;
 AI_tdstNodeInterpret *(*R2_AI_fn_p_stEvalTree)(
 	HIE_tdstSuperObject *p_stSpo,
 	AI_tdstNodeInterpret *p_stNode,
@@ -23,6 +23,7 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD dwReason, LPVOID lpReserved )
 		case DLL_PROCESS_ATTACH:
 		{
 			g_hDllInst = hModule;
+			R2_WndProc = GAM_fn_WndProc;
 			R2_AI_fn_p_stEvalTree = AI_fn_p_stEvalTree;
 
 			DetourTransactionBegin();
