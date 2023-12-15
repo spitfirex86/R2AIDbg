@@ -8,5 +8,4 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <detours.h>
 #include <ACP_Ray2.h>

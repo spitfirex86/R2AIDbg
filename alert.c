@@ -136,9 +136,9 @@ BOOL fn_bAlertBreak( char *szMsg, tdstBreakpoint *p_stBreakpoint, BOOL bCanDebug
 	strncpy(pData->szMsg, szMsg, C_MaxMsg - 1);
 	pData->szMsg[C_MaxMsg - 1] = 0;
 
-	pData->szSpoFamily = XHIE_fn_szGetSuperObjectFamilyName(p_stBreakpoint->p_stSpo);
-	pData->szSpoModel = XHIE_fn_szGetSuperObjectModelName(p_stBreakpoint->p_stSpo);
-	pData->szSpoInstance = XHIE_fn_szGetSuperObjectPersonalName(p_stBreakpoint->p_stSpo);
+	pData->szSpoFamily = HIE_fn_szGetObjectFamilyName(p_stBreakpoint->p_stSpo);
+	pData->szSpoModel = HIE_fn_szGetObjectModelName(p_stBreakpoint->p_stSpo);
+	pData->szSpoInstance = HIE_fn_szGetObjectPersonalName(p_stBreakpoint->p_stSpo);
 
 	int lResult = DialogBoxParam(g_hDllInst, MAKEINTRESOURCE(IDD_DEBUGBREAK), NULL, AlertDlgProc, (LPARAM)pData);
 

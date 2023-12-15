@@ -26,19 +26,16 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD dwReason, LPVOID lpReserved )
 			R2_WndProc = GAM_fn_WndProc;
 			R2_AI_fn_p_stEvalTree = AI_fn_p_stEvalTree;
 
-			DetourTransactionBegin();
-			DetourAttach((PVOID *)&R2_WndProc, (PVOID)MOD_WndProc);
-			DetourAttach((PVOID *)&R2_AI_fn_p_stEvalTree, (PVOID)MOD_AI_fn_p_stEvalTree);
-			DetourTransactionCommit();
+			FHK_fn_lCreateHook((void**)(&R2_WndProc), (void*)(MOD_WndProc));
+			FHK_M_lCreateHook(&R2_AI_fn_p_stEvalTree, MOD_AI_fn_p_stEvalTree);
+
 			break;
 		}
 
 		case DLL_PROCESS_DETACH:
 		{
-			DetourTransactionBegin();
-			DetourDetach((PVOID *)&R2_WndProc, (PVOID)MOD_WndProc);
-			DetourDetach((PVOID *)&R2_AI_fn_p_stEvalTree, (PVOID)MOD_AI_fn_p_stEvalTree);
-			DetourTransactionCommit();
+			FHK_M_lDestroyHook(&R2_WndProc, MOD_WndProc);
+			FHK_M_lDestroyHook(&R2_AI_fn_p_stEvalTree, MOD_AI_fn_p_stEvalTree);
 			break;
 		}
 

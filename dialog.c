@@ -37,13 +37,13 @@ void fn_vPopulateSposCB( HWND hCB )
 	ComboBox_ResetContent(hCB);
 
 	HIE_tdstSuperObject *pChild;
-	LST_M_DynamicForEach(*GAM_pp_stDynamicWorld, pChild)
+	LST_M_DynamicForEach(*GAM_g_p_stDynamicWorld, pChild)
 	{
 		if ( pChild->ulType != HIE_C_Type_Actor )
 			continue;
 
 		char szBuffer[80];
-		char *szName = XHIE_fn_szGetSuperObjectPersonalName(pChild);
+		char *szName = HIE_fn_szGetObjectPersonalName(pChild);
 
 		if ( szName )
 			snprintf(szBuffer, 80, "%s", szName);
