@@ -12,7 +12,6 @@
 #define IDC_ADD                         1002
 #define IDC_REMOVE                      1003
 #define IDC_SPOS                        1004
-#define IDC_DSGVARS                     1009
 #define IDC_NOUN                        1009
 #define IDC_PAUSEALL                    1013
 #define IDC_VERB                        1013
@@ -22,8 +21,9 @@
 #define IDC_MSG_PREVIOUSVAL             1017
 #define IDC_MSG_TEXT                    1019
 #define ID_DEBUG                        1020
-#define IDC_EDIT6                       1023
 #define IDC_VALUE                       1024
+#define IDC_ENABLE                      1025
+#define IDC_BUTTON1                     1026
 
 // Next default values for new objects
 // 
@@ -31,7 +31,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        110
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1025
+#define _APS_NEXT_CONTROL_VALUE         1027
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

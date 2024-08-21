@@ -4,6 +4,21 @@
 #include "alert.h"
 
 
+char const *a_szNouns[] = {
+	[eN_HitPoints] = "HitPoints",
+	[eN_HitPointsMax] = "HitPointsMax",
+	[eN_DsgVar] = "DsgVar"
+};
+
+char const *a_szVerbs[] = {
+	[eV_Equal] = "==",
+	[eV_NotEqual] = "<>",
+	[eV_Greater] = ">",
+	[eV_Lesser] = "<",
+	[eV_Changed] = "!!"
+};
+
+
 LST_M_DynamicAnchorTo(tdstBreakpoint) g_stBreakpoints = { 0 };
 
 BOOL g_bBreakpointsPaused = FALSE;
@@ -17,50 +32,51 @@ unsigned long g_ulCurrFrame = 0;
 unsigned long g_ulPrevFrame = 0;
 
 
+void fn_vGetNounName( tdstNoun *pNoun, char *szOut )
+{
+	if ( pNoun->eType == eN_DsgVar )
+		sprintf(szOut, "%s_%d", a_szNouns[pNoun->eType], pNoun->lDsgVarId);
+	else
+		sprintf(szOut, "%s", a_szNouns[pNoun->eType]);
+}
+
+void fn_vGetVerbName( tdstVerb *pVerb, char *szOut )
+{
+	if ( pVerb->eType == eV_Changed )
+		snprintf(szOut, 20, "%s", a_szVerbs[pVerb->eType]);
+	else
+		snprintf(szOut, 20, "%s %d", a_szVerbs[pVerb->eType], pVerb->lValue);
+}
+
 tdstBreakpoint * fn_p_stAddBreakpoint( tdstNewBreakpoint *p_stNew )
 {
+	tdstNoun *pNoun = &p_stNew->stNoun;
+	tdstVerb *pVerb = &p_stNew->stVerb;
+
+	char const *szVerbName = a_szVerbs[pVerb->eType];
+
+	char szNoun[20];
+	char szVerb[20];
+
+	if ( pNoun->eType == eN_DsgVar )
+	{
+		AI_tdeDsgVarType eType;
+		AI_fn_bGetDsgVar(p_stNew->p_stSpo, pNoun->lDsgVarId, &eType, NULL);
+		pNoun->eDsgVarType = eType;
+	}
+
+	fn_vGetNounName(pNoun, szNoun);
+	fn_vGetVerbName(pVerb, szVerb);
+
 	tdstBreakpoint *p_stBreakpoint = calloc(1, sizeof(tdstBreakpoint));
 
+	snprintf(p_stBreakpoint->szName, 120, "%s - %s %s", p_stNew->szSpoName, szNoun, szVerb);
+
 	p_stBreakpoint->p_stSpo = p_stNew->p_stSpo;
-	p_stBreakpoint->eType = p_stNew->eType;
-	p_stBreakpoint->eMode = p_stNew->eMode;
+	p_stBreakpoint->stNoun = *pNoun;
+	p_stBreakpoint->stVerb = *pVerb;
 
-	char szType[20];
-	char szMode[20];
-
-	switch ( p_stNew->eType )
-	{
-		case e_BT_HitPoints:
-			strcpy(szType, "HitPoints");
-			break;
-
-		case e_BT_HitPointsMax:
-			strcpy(szType, "HitPointsMax");
-			break;
-
-		case e_BT_DsgVar:
-			p_stBreakpoint->lDsgVarId = p_stNew->lDsgVarId;
-			p_stBreakpoint->eDsgVarType = fn_eGetDsgVarType(p_stNew->p_stSpo, p_stNew->lDsgVarId);
-			snprintf(szType, 20, "DsgVar_%d", p_stNew->lDsgVarId);
-			break;
-	}
-
-	switch ( p_stNew->eMode )
-	{
-		case e_BM_Zero:
-			strcpy(szMode, "== 0");
-			break;
-
-		case e_BM_NonZero:
-			strcpy(szMode, "<> 0");
-			break;
-
-		case e_BM_Change:
-			strcpy(szMode, "!!");
-			break;
-	}
-
-	snprintf(p_stBreakpoint->szName, 120, "%s - %s %s", p_stNew->szSpoName, szType, szMode);
+	p_stBreakpoint->bEnabled = TRUE;
 	p_stBreakpoint->bFirstInit = TRUE;
 	p_stBreakpoint->bIsDead = FALSE;
 
@@ -78,21 +94,21 @@ void fn_vBreakpointUpdateValues( tdstBreakpoint *p_stBreakpoint )
 {
 	p_stBreakpoint->lPreviousValue = p_stBreakpoint->lCurrentValue;
 
-	HIE_tdstEngineObject *p_stPerso = p_stBreakpoint->p_stSpo->hLinkedObject.p_stCharacter;
-	switch ( p_stBreakpoint->eType )
+	switch ( p_stBreakpoint->stNoun.eType )
 	{
-		case e_BT_HitPoints:
-			p_stBreakpoint->lCurrentValue = p_stPerso->hStandardGame->ucHitPoints;
+		case eN_HitPoints:
+			p_stBreakpoint->lCurrentValue = HIE_M_hSuperObjectGetStdGame(p_stBreakpoint->p_stSpo)->ucHitPoints;
 			break;
 
-		case e_BT_HitPointsMax:
-			p_stBreakpoint->lCurrentValue = p_stPerso->hStandardGame->ucHitPointsMax;
+		case eN_HitPointsMax:
+			p_stBreakpoint->lCurrentValue = HIE_M_hSuperObjectGetStdGame(p_stBreakpoint->p_stSpo)->ucHitPointsMax;
 			break;
 
-		case e_BT_DsgVar:
+		case eN_DsgVar:
 		{
 			AI_tdeDsgVarType eType;
-			void *pv_Value = fn_pvGetDsgVar(p_stBreakpoint->p_stSpo, p_stBreakpoint->lDsgVarId, &eType);
+			void *pv_Value;
+			AI_fn_bGetDsgVar(p_stBreakpoint->p_stSpo, p_stBreakpoint->stNoun.lDsgVarId, &eType, &pv_Value);
 
 			switch ( eType )
 			{
@@ -121,7 +137,6 @@ void fn_vBreakpointUpdateValues( tdstBreakpoint *p_stBreakpoint )
 					p_stBreakpoint->lCurrentValue = *(int *)pv_Value;
 					break;
 			}
-
 			break;
 		}
 	}
@@ -135,15 +150,24 @@ void fn_vBreakpointUpdateValues( tdstBreakpoint *p_stBreakpoint )
 
 BOOL fn_bBreakpointCheckCondition( tdstBreakpoint *p_stBreakpoint )
 {
-	switch ( p_stBreakpoint->eMode )
+	int lLeft = p_stBreakpoint->lCurrentValue;
+	int lRight = p_stBreakpoint->stVerb.lValue;
+
+	switch ( p_stBreakpoint->stVerb.eType )
 	{
-		case e_BM_Zero:
-			return (p_stBreakpoint->lCurrentValue == 0 && g_ulCurrFrame != g_ulPrevFrame);
+		case eV_Equal:
+			return (lLeft == lRight && g_ulCurrFrame != g_ulPrevFrame);
 
-		case e_BM_NonZero:
-			return (p_stBreakpoint->lCurrentValue != 0  && g_ulCurrFrame != g_ulPrevFrame);
+		case eV_NotEqual:
+			return (lLeft != lRight && g_ulCurrFrame != g_ulPrevFrame);
 
-		case e_BM_Change:
+		case eV_Greater:
+			return (lLeft > lRight && g_ulCurrFrame != g_ulPrevFrame);
+
+		case eV_Lesser:
+			return (lLeft < lRight && g_ulCurrFrame != g_ulPrevFrame);
+
+		case eV_Changed:
 			return (p_stBreakpoint->lCurrentValue != p_stBreakpoint->lPreviousValue);
 	}
 
@@ -162,7 +186,6 @@ void fn_vBreakpointVerify( tdstBreakpoint *p_stBreakpoint )
 	{
 		/* object was probably destroyed, mark as dead */
 		p_stBreakpoint->bIsDead = TRUE;
-		strcat(p_stBreakpoint->szName, " [DEAD]");
 	}
 }
 
@@ -172,18 +195,15 @@ void fn_vCheckBreakpoints( void )
 	LST_M_DynamicForEach(&g_stBreakpoints, pBreakpoint)
 	{
 		fn_vBreakpointVerify(pBreakpoint);
-		if ( pBreakpoint->bIsDead )
+		if ( !pBreakpoint->bEnabled || pBreakpoint->bIsDead )
 			continue;
 
 		fn_vBreakpointUpdateValues(pBreakpoint);
-
 		if ( fn_bBreakpointCheckCondition(pBreakpoint) )
 		{
 			fn_vPauseEngine();
-
 			if ( fn_bAlertBreak("A breakpoint has been reached !\r\nIf you want to debug, attach the debugger now.", pBreakpoint, TRUE) )
 				__debugbreak();
-			
 			fn_vResumeEngine();
 		}
 	}
@@ -233,4 +253,50 @@ void fn_vResumeEngine( void )
 	GAM_g_stEngineStructure->bEngineIsInPaused = FALSE;
 	*R2_HIE_gs_lCurrentFrame = g_lSaveCurrentFrame;
 	R2_fn_vLoadEngineClock();
+}
+
+
+void fn_vDebugDumpBreakpoints( void )
+{
+	tdstBreakpoint *pBP;
+	int i;
+
+	LOG_M_vLogInfo("Begin Breakpoint Dump :");
+	LST_M_DynamicForEachIndex(&g_stBreakpoints, pBP, i)
+	{
+		char szName[20];
+		char szMsg[512];
+		char szNoun[20], szVerb[20];
+
+		fn_vGetNounName(&pBP->stNoun, szNoun);
+		fn_vGetVerbName(&pBP->stVerb, szVerb);
+
+		void *pv_Value;
+		AI_fn_bGetDsgVar(pBP->p_stSpo, pBP->stNoun.lDsgVarId, NULL, &pv_Value);
+
+		sprintf(szName, "Breakpoint %d:", i);
+		sprintf(
+			szMsg,
+			"\tName: '%s'\n"
+			"\tCurrent Value: %d\n"
+			"\tPrevious Value: %d\n"
+			"\tNoun '%s':\n"
+			"\t\tType: %d\n"
+			"\t\tDsgVar Id: %d\n"
+			"\t\tDsgVar Type: %d\n"
+			"\t\t+ DsgVar Offset: %p\n"
+			"\t\t+ DsgVar Value: char: %d, short: %d, int: %d\n"
+			"\tVerb '%s':\n"
+			"\t\tType: %d\n"
+			"\t\tValue: %d\n"
+			"\tEnabled: %s\n"
+			"\tDead: %s\n",
+			pBP->szName, pBP->lCurrentValue, pBP->lPreviousValue,
+			szNoun, pBP->stNoun.eType, pBP->stNoun.lDsgVarId, pBP->stNoun.eDsgVarType,
+			pv_Value, *(char*)pv_Value, *(short*)pv_Value, *(int*)pv_Value,
+			szVerb, pBP->stVerb.eType, pBP->stVerb.lValue,
+			(pBP->bEnabled ? "YES" : "NO"), (pBP->bIsDead ? "YES" : "NO")
+		);
+		LOG_M_vLogInfoEx(szName, szMsg);
+	}
 }

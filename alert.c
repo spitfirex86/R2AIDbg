@@ -84,6 +84,7 @@ BOOL CALLBACK AlertDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			switch ( LOWORD(wParam) )
 			{
 				case ID_DEBUG:
+				case IDIGNORE:
 				case IDOK:
 				case IDCANCEL:
 					EndDialog(hWnd, LOWORD(wParam));
@@ -141,6 +142,9 @@ BOOL fn_bAlertBreak( char *szMsg, tdstBreakpoint *p_stBreakpoint, BOOL bCanDebug
 	pData->szSpoInstance = HIE_fn_szGetObjectPersonalName(p_stBreakpoint->p_stSpo);
 
 	int lResult = DialogBoxParam(g_hDllInst, MAKEINTRESOURCE(IDD_DEBUGBREAK), NULL, AlertDlgProc, (LPARAM)pData);
+	
+	if ( lResult == IDIGNORE )
+		p_stBreakpoint->bEnabled = FALSE;
 
 	free(pData);
 	return (lResult == ID_DEBUG);

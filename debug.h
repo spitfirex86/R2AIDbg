@@ -3,21 +3,39 @@
 #include "framework.h"
 
 
-typedef enum tdeBreakpointType
+typedef enum tdeNoun
 {
-	e_BT_HitPoints,
-	e_BT_HitPointsMax,
-	e_BT_DsgVar
+	eN_HitPoints,
+	eN_HitPointsMax,
+	eN_DsgVar
 }
-tdeBreakpointType;
+tdeNoun;
 
-typedef enum tdeBreakpointMode
+typedef enum tdeVerb
 {
-	e_BM_Zero,
-	e_BM_NonZero,
-	e_BM_Change
+	eV_Equal,
+	eV_NotEqual,
+	eV_Greater,
+	eV_Lesser,
+	eV_Changed
 }
-tdeBreakpointMode;
+tdeVerb;
+
+typedef struct tdstNoun
+{
+	tdeNoun eType;
+	int lDsgVarId;
+	AI_tdeDsgVarType eDsgVarType;
+}
+tdstNoun;
+
+typedef struct tdstVerb
+{
+	tdeVerb eType;
+	int lValue;
+}
+tdstVerb;
+
 
 typedef struct tdstBreakpoint tdstBreakpoint;
 struct tdstBreakpoint
@@ -25,19 +43,18 @@ struct tdstBreakpoint
 	LST_M_DynamicElementDecl(tdstBreakpoint)
 
 	HIE_tdstSuperObject *p_stSpo;
-	tdeBreakpointType eType;
-	tdeBreakpointMode eMode;
 
-	int lDsgVarId;
-	AI_tdeDsgVarType eDsgVarType;
+	tdstNoun stNoun;
+	tdstVerb stVerb;
 
 	char szName[120];
 
 	int lPreviousValue;
 	int lCurrentValue;
-	BOOL bFirstInit;
-
-	BOOL bIsDead;
+	
+	ACP_tdxBool bEnabled;
+	ACP_tdxBool bFirstInit;
+	ACP_tdxBool bIsDead;
 };
 
 LST_M_DynamicListDecl(tdstBreakpoint);
@@ -45,9 +62,8 @@ LST_M_DynamicListDecl(tdstBreakpoint);
 typedef struct tdstNewBreakpoint
 {
 	HIE_tdstSuperObject *p_stSpo;
-	tdeBreakpointType eType;
-	tdeBreakpointMode eMode;
-	int lDsgVarId;
+	tdstNoun stNoun;
+	tdstVerb stVerb;
 	char szSpoName[80];
 }
 tdstNewBreakpoint;
@@ -87,3 +103,5 @@ extern BOOL g_bInMenu;
 
 tdstBreakpoint * fn_p_stAddBreakpoint( tdstNewBreakpoint *p_stNew );
 void fn_vRemoveBreakpoint( tdstBreakpoint *p_stBreakpoint );
+
+void fn_vDebugDumpBreakpoints( void );

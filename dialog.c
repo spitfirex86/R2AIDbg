@@ -4,33 +4,30 @@
 #include "misc.h"
 
 
+typedef struct tdstValStr
+{
+	int lType;
+	char const *szName;
+}
+tdstValStr;
+
+
+tdstValStr a_stAddNouns[] = {
+	{ eN_HitPoints, "HitPoints" },
+	{ eN_HitPointsMax, "HitPointsMax" }
+};
+
+tdstValStr a_stAddVerbs[] = {
+	{ eV_Equal, "Is" },
+	{ eV_NotEqual, "Is Not" },
+	{ eV_Greater, "Greater" },
+	{ eV_Lesser, "Lesser" },
+	{ eV_Changed, "Changed" },
+};
+
+
 tdstNewBreakpoint g_stAddDlgData = { 0 };
 
-
-int fn_lPopulateDsgVarsCB( HWND hCB, HIE_tdstSuperObject *p_stSpo )
-{
-	char szBuffer[20];
-
-	ComboBox_ResetContent(hCB);
-
-	HIE_tdstEngineObject *p_stPerso = p_stSpo->hLinkedObject.p_stCharacter;
-	if ( !p_stPerso->hBrain || !p_stPerso->hBrain->p_stMind )
-		return 0;
-
-	AI_tdstDsgMem *p_stDsgMem = p_stPerso->hBrain->p_stMind->p_stDsgMem;
-	if ( !p_stDsgMem )
-		return 0;
-	
-	int lNbVar = (*p_stDsgMem->pp_stDsgVar)->ucNbDsgVar;
-	for ( int i = 0; i < lNbVar; i++ )
-	{
-		snprintf(szBuffer, 20, "%d", i);
-		int lIdx = ComboBox_AddString(hCB, szBuffer);
-		ComboBox_SetItemData(hCB, lIdx, i);
-	}
-
-	return lNbVar;
-}
 
 void fn_vPopulateSposCB( HWND hCB )
 {
@@ -55,68 +52,102 @@ void fn_vPopulateSposCB( HWND hCB )
 	}
 }
 
-
-
-void fn_vUpdateControlsStatus_AddDlg( HWND hWnd )
+int fn_lPopulateDsgVarsCB( HWND hCB, tdeNoun eNoun, HIE_tdstSuperObject *p_stSpo )
 {
-	HWND hOk = GetDlgItem(hWnd, IDOK);
-	HWND hSpos = GetDlgItem(hWnd, IDC_SPOS);
-	HWND hType_Dsg = GetDlgItem(hWnd, IDC_TYPE_DSG);
-	HWND hDsgVars = GetDlgItem(hWnd, IDC_DSGVARS);
+	char szBuffer[20];
+	
+	HIE_tdstEngineObject *p_stPerso = HIE_M_hSuperObjectGetActor(p_stSpo);
+	if ( !p_stPerso->hBrain || !p_stPerso->hBrain->p_stMind )
+		return 0;
+
+	AI_tdstDsgMem *p_stDsgMem = p_stPerso->hBrain->p_stMind->p_stDsgMem;
+	if ( !p_stDsgMem )
+		return 0;
+	
+	int lNbVar = (*p_stDsgMem->pp_stDsgVar)->ucNbDsgVar;
+	for ( int i = 0; i < lNbVar; i++ )
+	{
+		snprintf(szBuffer, 20, "DsgVar_%d", i);
+		int lIdx = ComboBox_AddString(hCB, szBuffer);
+		ComboBox_SetItemData(hCB, lIdx, MAKELPARAM(eNoun, i));
+	}
+
+	return lNbVar;
+}
+
+void fn_vPopulateNounsCB( HWND hCB, HIE_tdstSuperObject *p_stSpo )
+{
+	ComboBox_ResetContent(hCB);
+
+	for ( int i = 0; i < ARRAYSIZE(a_stAddNouns); i++ )
+	{
+		tdstValStr *pNoun = &a_stAddNouns[i];
+		int lIdx = ComboBox_AddString(hCB, pNoun->szName);
+		ComboBox_SetItemData(hCB, lIdx, MAKELPARAM(pNoun->lType, 0));
+	}
+
+	if ( p_stSpo )
+		fn_lPopulateDsgVarsCB(hCB, eN_DsgVar, p_stSpo);
+
+	ComboBox_SetCurSel(hCB, 0);
+}
+
+void fn_vPopulateVerbsCB( HWND hCB )
+{
+	ComboBox_ResetContent(hCB);
+
+	for ( int i = 0; i < ARRAYSIZE(a_stAddVerbs); i++ )
+	{
+		tdstValStr *pVerb = &a_stAddVerbs[i];
+		int lIdx = ComboBox_AddString(hCB, pVerb->szName);
+		ComboBox_SetItemData(hCB, lIdx, pVerb->lType);
+	}
+
+	ComboBox_SetCurSel(hCB, 0);
+}
+
+void fn_vUpdateControlsStatus_AddDlg( HWND hWnd, HWND hSpos, HWND hNoun, HWND hVerb, HWND hValue )
+{
+	int lNounIdx = ComboBox_GetCurSel(hNoun);
+	int lVerbIdx = ComboBox_GetCurSel(hVerb);
 
 	BOOL bGotSpo = ComboBox_GetCurSel(hSpos) != CB_ERR;
-	BOOL bSpoHasDsgVars = IsWindowEnabled(hType_Dsg);
-	BOOL bDsgTypeSelected = Button_GetCheck(hType_Dsg);
-	BOOL bGotDsgVar = ComboBox_GetCurSel(hDsgVars) != CB_ERR;
+	BOOL bGotNoun = lNounIdx != CB_ERR;
+	BOOL bGotVerb = lVerbIdx != CB_ERR;
+	BOOL bVerbHasValue = bGotVerb && a_stAddVerbs[lVerbIdx].lType != eV_Changed;
+	BOOL bGotValue = bVerbHasValue ? Edit_GetTextLength(hValue) > 0 : TRUE;
 
-	/* No SPO selected - disable DsgVar options */
-	if ( !bGotSpo )
-	{
-		EnableWindow(hOk, FALSE);
-		EnableWindow(hType_Dsg, FALSE);
-		EnableWindow(hDsgVars, FALSE);
-		return;
-	}
+	/* only enable when verb requires a value */
+	EnableWindow(hValue, bVerbHasValue);
 
-	/* SPO was changed after selecting Dsg type - reset type selection */
-	if ( !bSpoHasDsgVars && bDsgTypeSelected )
-	{
-		CheckRadioButton(hWnd, IDC_TYPE_HP, IDC_TYPE_DSG, IDC_TYPE_HP);
-		bDsgTypeSelected = FALSE;
-	}
-
-	/* OK when a type other than Dsg is selected, or a DsgVar has already been chosen */
-	EnableWindow(hOk, !bDsgTypeSelected || bGotDsgVar);
-	/* Only enable when SPO has DsgVars */
-	EnableWindow(hType_Dsg, bSpoHasDsgVars);
-	/* Only enable when DsgVar type is selected */
-	EnableWindow(hDsgVars, bDsgTypeSelected);
+	/* all good == enable OK button */
+	HWND hOk = GetDlgItem(hWnd, IDOK);
+	EnableWindow(hOk, bGotSpo && bGotNoun && bGotVerb && bGotValue);
 }
 
 BOOL CALLBACK AddDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-	static HWND hOk = NULL;
-	static HWND hSpos = NULL;
-	static HWND hDsgVars = NULL;
-	static HWND hType_DsgVar = NULL;
+	static HWND hSpos;
+	static HWND hNoun;
+	static HWND hVerb;
+	static HWND hValue;
 
 	switch ( uMsg )
 	{
 		case WM_INITDIALOG:
 		{
-			hOk = GetDlgItem(hWnd, IDOK);
 			hSpos = GetDlgItem(hWnd, IDC_SPOS);
-			hDsgVars = GetDlgItem(hWnd, IDC_DSGVARS);
-			hType_DsgVar = GetDlgItem(hWnd, IDC_TYPE_DSG);
+			hNoun = GetDlgItem(hWnd, IDC_NOUN);
+			hVerb = GetDlgItem(hWnd, IDC_VERB);
+			hValue = GetDlgItem(hWnd, IDC_VALUE);
 
 			fn_vPopulateSposCB(hSpos);
-			EnableWindow(hDsgVars, FALSE);
-			EnableWindow(hOk, FALSE);
+			fn_vPopulateNounsCB(hNoun, NULL);
+			fn_vPopulateVerbsCB(hVerb);
+			Edit_SetText(hValue, "0");
+			Edit_LimitText(hValue, 10);
 
-			CheckRadioButton(hWnd, IDC_TYPE_HP, IDC_TYPE_DSG, IDC_TYPE_HP);
-			CheckRadioButton(hWnd, IDC_MODE_ZERO, IDC_MODE_CHANGE, IDC_MODE_ZERO);
-			EnableWindow(hType_DsgVar, FALSE);
-			
+			fn_vUpdateControlsStatus_AddDlg(hWnd, hSpos, hNoun, hVerb, hValue);
 			return TRUE;
 		}
 
@@ -127,59 +158,64 @@ BOOL CALLBACK AddDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 					if ( HIWORD(wParam) == CBN_SELCHANGE )
 					{
 						int lIdx = ComboBox_GetCurSel(hSpos);
-						if ( lIdx != CB_ERR )
-						{
-							HIE_tdstSuperObject *p_stSpo = (HIE_tdstSuperObject *)ComboBox_GetItemData(hSpos, lIdx);
+						HIE_tdstSuperObject *p_stSpo = ( lIdx != CB_ERR )
+							? (HIE_tdstSuperObject *)ComboBox_GetItemData(hSpos, lIdx)
+							: NULL;
 
-							int lNbVars = fn_lPopulateDsgVarsCB(hDsgVars, p_stSpo);
-
-							EnableWindow(hType_DsgVar, (lNbVars > 0));
-							fn_vUpdateControlsStatus_AddDlg(hWnd);
-						}
+						fn_vPopulateNounsCB(hNoun, p_stSpo);
+						fn_vUpdateControlsStatus_AddDlg(hWnd, hSpos, hNoun, hVerb, hValue);
 						return TRUE;
 					}
 					break;
 
-				case IDC_DSGVARS:
+				case IDC_NOUN:
+				case IDC_VERB:
 					if ( HIWORD(wParam) == CBN_SELCHANGE )
 					{
-						if ( ComboBox_GetCurSel(hDsgVars) != CB_ERR )
-						{
-							fn_vUpdateControlsStatus_AddDlg(hWnd);
-						}
+						fn_vUpdateControlsStatus_AddDlg(hWnd, hSpos, hNoun, hVerb, hValue);
 						return TRUE;
 					}
-				break;
+					break;
 
-				case IDC_TYPE_HP:
-				case IDC_TYPE_HPM:
-				case IDC_TYPE_DSG:
-					fn_vUpdateControlsStatus_AddDlg(hWnd);
-
-				case IDC_MODE_ZERO:
-				case IDC_MODE_NZERO:
-				case IDC_MODE_CHANGE:
-					fn_vUpdateControlsStatus_AddDlg(hWnd);
-					return TRUE;
+				case IDC_VALUE:
+					if ( HIWORD(wParam) == EN_UPDATE )
+					{
+						fn_vUpdateControlsStatus_AddDlg(hWnd, hSpos, hNoun, hVerb, hValue);
+						return TRUE;
+					}
+					break;
 
 				case IDOK:
 				{
+					char szBuffer[20], *pEnd;
+					Edit_GetText(hValue, szBuffer, sizeof(szBuffer));
+
+					int lValue = strtol(szBuffer, &pEnd, 0);
+					if ( pEnd == szBuffer || *pEnd != '\0' )
+					{
+						SetFocus(hValue);
+						Edit_SetSel(hValue, 0, -1);
+						return TRUE;
+					}
+
 					int lIdx = ComboBox_GetCurSel(hSpos);
 					g_stAddDlgData.p_stSpo = (HIE_tdstSuperObject *)ComboBox_GetItemData(hSpos, lIdx);
 					ComboBox_GetLBText(hSpos, lIdx, g_stAddDlgData.szSpoName);
 
-					lIdx = ComboBox_GetCurSel(hDsgVars);
-					g_stAddDlgData.lDsgVarId =ComboBox_GetItemData(hDsgVars, lIdx);
+					lIdx = ComboBox_GetCurSel(hNoun);
+					LPARAM lIdNoun = (LPARAM)ComboBox_GetItemData(hNoun, lIdx);
+					g_stAddDlgData.stNoun.eType = LOWORD(lIdNoun);
+					g_stAddDlgData.stNoun.lDsgVarId = HIWORD(lIdNoun);
 
-					if ( Button_GetCheck(GetDlgItem(hWnd, IDC_TYPE_HP)) ) g_stAddDlgData.eType = e_BT_HitPoints;
-					if ( Button_GetCheck(GetDlgItem(hWnd, IDC_TYPE_HPM)) ) g_stAddDlgData.eType = e_BT_HitPointsMax;
-					if ( Button_GetCheck(GetDlgItem(hWnd, IDC_TYPE_DSG)) ) g_stAddDlgData.eType = e_BT_DsgVar;
-
-					if ( Button_GetCheck(GetDlgItem(hWnd, IDC_MODE_ZERO)) ) g_stAddDlgData.eMode = e_BM_Zero;
-					if ( Button_GetCheck(GetDlgItem(hWnd, IDC_MODE_NZERO)) ) g_stAddDlgData.eMode = e_BM_NonZero;
-					if ( Button_GetCheck(GetDlgItem(hWnd, IDC_MODE_CHANGE)) ) g_stAddDlgData.eMode = e_BM_Change;
+					lIdx = ComboBox_GetCurSel(hVerb);
+					g_stAddDlgData.stVerb.eType = (tdeVerb)ComboBox_GetItemData(hVerb, lIdx);
+					g_stAddDlgData.stVerb.lValue = lValue;
 				}
 				case IDCANCEL:
+					hSpos = NULL;
+					hNoun = NULL;
+					hVerb = NULL;
+					hValue = NULL;
 					EndDialog(hWnd, LOWORD(wParam));
 					return TRUE;
 			}
@@ -197,16 +233,25 @@ void fn_vPopulateBreakpointsLB( HWND hLB )
 	tdstBreakpoint *pItem;
 	LST_M_DynamicForEach(&g_stBreakpoints, pItem)
 	{
-		int lIdx = ListBox_AddString(hLB, pItem->szName);
+		char szName[200];
+		snprintf(
+			szName, 200, "%s%s%s",
+			(pItem->bEnabled) ? "" : "-- ",
+			pItem->szName,
+			(pItem->bIsDead) ? " [DEAD]" : ""
+		);
+
+		int lIdx = ListBox_AddString(hLB, szName);
 		ListBox_SetItemData(hLB, lIdx, pItem);
 	}
 }
 
 BOOL CALLBACK MainDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-	static HWND hList = NULL;
-	static HWND hRemove = NULL;
-	static HWND hPauseAll = NULL;
+	static HWND hList;
+	static HWND hRemove;
+	static HWND hEnable;
+	static HWND hPauseAll;
 
 	switch ( uMsg )
 	{
@@ -217,12 +262,14 @@ BOOL CALLBACK MainDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 			SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 			SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 
-			hRemove = GetDlgItem(hWnd, IDC_REMOVE);
 			hList = GetDlgItem(hWnd, IDC_LIST);
+			hRemove = GetDlgItem(hWnd, IDC_REMOVE);
+			hEnable = GetDlgItem(hWnd, IDC_ENABLE);
 			hPauseAll = GetDlgItem(hWnd, IDC_PAUSEALL);
 
 			fn_vPopulateBreakpointsLB(hList);
 			EnableWindow(hRemove, (ListBox_GetCurSel(hList) != LB_ERR));
+			EnableWindow(hEnable, (ListBox_GetCurSel(hList) != LB_ERR));
 			Button_SetCheck(hPauseAll, g_bBreakpointsPaused);
 
 			return TRUE;
@@ -234,7 +281,14 @@ BOOL CALLBACK MainDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 				case IDC_LIST:
 					if ( HIWORD(wParam) == LBN_SELCHANGE )
 					{
-						EnableWindow(hRemove, (ListBox_GetCurSel(hList) != LB_ERR));
+						int lIdx = ListBox_GetCurSel(hList);
+						BOOL bSel = lIdx != LB_ERR;
+						EnableWindow(hRemove, bSel);
+						EnableWindow(hEnable, bSel);
+
+						tdstBreakpoint *p_stBreakpoint = (tdstBreakpoint *)ListBox_GetItemData(hList, lIdx);
+						Button_SetCheck(hEnable, bSel ? p_stBreakpoint->bEnabled : FALSE);
+
 						return TRUE;
 					}
 					break;
@@ -259,6 +313,18 @@ BOOL CALLBACK MainDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 						fn_vRemoveBreakpoint(p_stBreakpoint);
 						fn_vPopulateBreakpointsLB(hList);
 						EnableWindow(hRemove, (ListBox_GetCurSel(hList) != LB_ERR));
+						EnableWindow(hEnable, (ListBox_GetCurSel(hList) != LB_ERR));
+					}
+					return TRUE;
+				}
+
+				case IDC_ENABLE:
+				{
+					int lIdx = ListBox_GetCurSel(hList);
+					if ( lIdx != LB_ERR )
+					{
+						tdstBreakpoint *p_stBreakpoint = (tdstBreakpoint *)ListBox_GetItemData(hList, lIdx);
+						p_stBreakpoint->bEnabled = Button_GetCheck(hEnable);
 					}
 					return TRUE;
 				}
@@ -271,6 +337,10 @@ BOOL CALLBACK MainDlgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
 				case IDOK:
 				case IDCANCEL:
+					hList = NULL;
+					hRemove = NULL;
+					hEnable = NULL;
+					hPauseAll = NULL;
 					EndDialog(hWnd, LOWORD(wParam));
 					return TRUE;
 			}
@@ -298,6 +368,8 @@ LRESULT CALLBACK MOD_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 {
 	if ( uMsg == WM_KEYDOWN && wParam == 'D' && IPT_g_stInputStructure->ulNumberOfEntryElement )
 	{
+		if ( GetKeyState(VK_CONTROL) & 0x8000 )
+			fn_vDebugDumpBreakpoints();
 		fn_vShowMainDialog();
 		return 0;
 	}

@@ -26,7 +26,7 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD dwReason, LPVOID lpReserved )
 			R2_WndProc = GAM_fn_WndProc;
 			R2_AI_fn_p_stEvalTree = AI_fn_p_stEvalTree;
 
-			FHK_fn_lCreateHook((void**)(&R2_WndProc), (void*)(MOD_WndProc));
+			FHK_M_lCreateHook(&R2_WndProc, MOD_WndProc);
 			FHK_M_lCreateHook(&R2_AI_fn_p_stEvalTree, MOD_AI_fn_p_stEvalTree);
 
 			break;
